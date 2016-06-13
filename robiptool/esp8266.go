@@ -1,10 +1,9 @@
-package main
+package robiptool
 
 import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -25,33 +24,6 @@ var ErrTimeout = &Error{msg: "Timed out waiting for packet", timeout: true}
 var ErrInvalidHeadOfPacket = &Error{msg: "Invalid head of packet"}
 var ErrInvalidSLIPEscape = &Error{msg: "Invalid SLIP escape"}
 var ErrResponseDoesntMatch = &Error{msg: "Response doesn't match request"}
-
-func main() {
-	log.Println(ESP_READ_REG)
-	var isGUI = flag.Bool("gui", false, "GUI mode")
-	var port = flag.String("port", "", "Serial port device")
-	var _ = flag.Bool("default-port", false, "Use default serial port device")
-	var isShowPorts = flag.Bool("ports", false, "Show port devices")
-	flag.Parse()
-
-	if *isGUI {
-		fmt.Println("gui")
-    guiMain()
-
-	} else if *isShowPorts {
-		ports, err := serial.ListPorts()
-		if err != nil {
-			log.Panic(err)
-		}
-		log.Printf("Found %d ports:\n", len(ports))
-		for _, port := range ports {
-			fmt.Println(port.Name())
-		}
-
-	} else {
-		writeData(*port)
-	}
-}
 
 var retChan chan []byte
 var errChan chan error
