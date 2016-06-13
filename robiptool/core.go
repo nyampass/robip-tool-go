@@ -13,10 +13,10 @@ func Run() {
 	var port = flag.String("port", "", "Serial port device")
 	var _ = flag.Bool("default-port", false, "Use default serial port device")
 	var isShowPorts = flag.Bool("ports", false, "Show port devices")
+	var binFile = flag.String("file", "", "File path")
 	flag.Parse()
 
-	if *isGUI {
-		fmt.Println("gui")
+	if *isGUI || len(*binFile) == 0 {
     showUI()
 
 	} else if *isShowPorts {

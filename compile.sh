@@ -1,1 +1,3 @@
 GOOS=windows GOARCH=amd64 go build main.go
+
+GOPATH=/Users/tokusei/.go ~/.go/bin/gox -osarch="darwin/amd64" ./...
