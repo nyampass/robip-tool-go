@@ -1,55 +1,68 @@
 package robiptool
 
 import (
-    "github.com/andlabs/ui"
+  "os"
+  "fmt"
+  "gopkg.in/qml.v1"
 )
 
 func showUI() {
-  if err := ui.Main(func() {
-    window := ui.NewWindow("Robip tool", 400, 200, false)
-    window.SetChild(components())
-    window.OnClosing(func(*ui.Window) bool {
-      ui.Quit()
-      return true
-    })
-    window.SetMargined(true)
-    window.Show()
-
-  }); err != nil {
-    panic(err)
-  }
+  if err := qml.Run(run); err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
 }
 
-func components() *ui.Box {
-  mainBox := ui.NewHorizontalBox()
-  mainBox.SetPadded(true)
+func run() error {
+  engine := qml.NewEngine()
 
-  fieldBox := ui.NewVerticalBox()
-  fieldBox.Append(ui.NewLabel("Robip ID: "), false)
-  fieldBox.Append(ui.NewLabel("ポート: "), false)
-  mainBox.Append(fieldBox, false)
+  binding := &Binding{}
+	engine.Context().SetVar("binding", binding)
 
-  inputBox := ui.NewVerticalBox()
-  name := ui.NewEntry()
-  inputBox.Append(name, false)
+  if ports, err := Ports(); err == nil {
+    for _, port := range ports {
+      binding.AddPort(port)
+    }
+  }
 
-  c := ui.NewCombobox()
-  c.Append("Hoge")
-  inputBox.Append(c, false)
+  if controls, err := engine.LoadFile("robiptool/ui.qml"); err != nil {
+    return err
+  } else {
+    window := controls.CreateWindow(nil)
+    window.Show()
 
-  mainBox.Append(inputBox, false)
+    window.Wait()
+  }
+  return nil
+}
 
-  buttonBox := ui.NewVerticalBox()
-  button := ui.NewButton("書き込む!")
-  buttonBox.Append(button, false)
-  refreshButton := ui.NewButton("更新")
-  buttonBox.Append(refreshButton, false)
+type Binding struct {
+	Ports []string
+	Counter	int
+}
 
-  mainBox.Append(buttonBox, false)
+func (binding  *Binding) AddPort(port string) {
+	binding.Ports = append(binding.Ports, port)
+	binding.Counter++
+	qml.Changed(binding, &binding.Counter)
+}
 
-  progress := ui.NewProgressBar()
-  progress.SetValue(33)
-  mainBox.Append(progress, true)
+func (binding *Binding) PortsLength() int {
+	return len(binding.Ports)
+}
 
-  return mainBox
+func (binding *Binding) PortAt(index int) string {
+	return binding.Ports[index]
+}
+
+func (binding *Binding) OnSelectPort(index int) {
+	// if index != -1 {
+	// 	p := binding.Ports[index]
+	// 	// log.Println(p)
+	// 	fmt.Println(p)
+	// }
+}
+
+func (binding *Binding) OnClicked() {
+	fmt.Println("clicked")
 }

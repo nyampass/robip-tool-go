@@ -11,7 +11,7 @@ import (
 	"time"
   "crypto/md5"
 
-	"github.com/mikepb/go-serial"
+  "github.com/mikepb/go-serial"
 )
 
 type Error struct {
@@ -27,6 +27,19 @@ var ErrResponseDoesntMatch = &Error{msg: "Response doesn't match request"}
 
 var retChan chan []byte
 var errChan chan error
+
+func Ports() ([]string, error) {
+  if infoList, err := serial.ListPorts(); err != nil {
+    return nil, err
+
+  } else {
+    ports := make([]string, len(infoList))
+    for i, info := range infoList {
+      ports[i] = info.Name()
+    }
+    return ports, nil
+  }
+}
 
 func writeData(port string) error {
 	fmt.Printf("write: %s\n", port)
