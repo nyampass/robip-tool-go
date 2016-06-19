@@ -41,7 +41,9 @@ func Ports() ([]string, error) {
   }
 }
 
-func writeData(port string) error {
+type UpdateProgress func(int)
+
+func WriteDataToPort(filepath string, port string, progressFunc UpdateProgress) error {
 	fmt.Printf("write: %s\n", port)
 	options := serial.RawOptions
 	options.Mode = serial.MODE_READ_WRITE
@@ -53,26 +55,28 @@ func writeData(port string) error {
 	defer p.Close()
 
 	if err := connect(p); err != nil {
-		log.Panic(err)
+		return err
 	}
 
   log.Println("in runStub")
 
 	if err = runStub(p, CESANTA_FLASHER_STUB); err != nil {
-		log.Panic(err)
+		return err
 	}
 
   packet := <-retChan
   err = <-errChan
 
 	if err != nil {
-		log.Panic(err)
+    return err
+
 	} else if string(packet) != "OHAI" {
-		log.Panic(Error{msg: fmt.Sprintf("Failed to connect to the flasher: %s", string(packet))})
+		return &Error{msg: fmt.Sprintf("Failed to connect to the flasher: %s", string(packet))}
 	}
 
-	if image, err := ioutil.ReadFile("/Users/tokusei/Documents/Arduino/ReadAnalogVoltage/ReadAnalogVoltage.cpp.nodemcu.bin"); err != nil {
-		log.Fatal(err)
+	if image, err := ioutil.ReadFile(filepath); err != nil {
+		return err
+
 	} else {
 		buff := new(bytes.Buffer)
 		if image[0] == 0xe9 {
@@ -99,6 +103,8 @@ func writeData(port string) error {
 		if err := bootFw(p); err != nil {
       log.Panic(err)
     }
+
+    progressFunc(100)
 	}
 
 	return nil

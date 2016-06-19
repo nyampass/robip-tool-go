@@ -30,6 +30,6 @@ func Run() {
 		}
 
 	} else {
-		writeData(*port)
+		WriteDataToPort(*binFile, *port, nil)
 	}
 }

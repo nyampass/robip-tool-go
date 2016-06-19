@@ -39,14 +39,16 @@ ApplicationWindow {
    id: rowLayout
 	   anchors.fill: parent
 	   TextField {
+	 id: robipID
 	 placeholderText: "Robip ID"
 		 Layout.fillWidth: true
 		 }
 	 Button {
 	 text: "書き込み"
 		 onClicked: {
-		 binding.onClicked()
-		   }
+		     binding.robipID = robipID.text
+		     binding.onClicked()
+		 }
 	 }
    }
    }
@@ -66,17 +68,10 @@ ApplicationWindow {
 		 pseudoModel.push(binding.portAt(i))
 		   }
 	   model = pseudoModel
-		 currentIndex = CurrentProfile
 		 }
    onCurrentIndexChanged: binding.onSelectPort(currentIndex)
 	   width: 200
 	   }
    }
-   TextArea {
-   id: log
-	   text: ""
-	 Layout.minimumHeight: 30
-	 Layout.fillWidth: true
-	 }
  }
 }
