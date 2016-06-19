@@ -41,9 +41,10 @@ func Ports() ([]string, error) {
   }
 }
 
-type UpdateProgress func(int)
+type UpdateProgress func(float32)
 
 func WriteDataToPort(filepath string, port string, progressFunc UpdateProgress) error {
+  progressFunc(0)
 	fmt.Printf("write: %s\n", port)
 	options := serial.RawOptions
 	options.Mode = serial.MODE_READ_WRITE
@@ -96,7 +97,7 @@ func WriteDataToPort(filepath string, port string, progressFunc UpdateProgress) 
 
     log.Println("in flashWrite")
 
-		if err := flashWrite(p, 0, buff.Bytes()); err != nil {
+		if err := flashWrite(p, 0, buff.Bytes(), progressFunc); err != nil {
       log.Panic(err)
     }
 
@@ -124,7 +125,7 @@ func read(p *serial.Port) ([]byte, error) {
   return ret, err
 }
 
-func flashWrite(p *serial.Port, addr int, data []byte) error {
+func flashWrite(p *serial.Port, addr int, data []byte, progressFunc UpdateProgress) error {
   log.Println("flashWrite")
 	write(p, pack("B", uint8(CMD_FLASH_WRITE)))
 	write(p, pack("III", uint32(addr), uint32(len(data)), uint32(1)))
@@ -149,7 +150,9 @@ func flashWrite(p *serial.Port, addr int, data []byte) error {
 				return &Error{msg: "Unexpected packet with writing"}
 			}
 
-      log.Printf("%d (%f %%)\n", numWritten, float32(numWritten) * 100.0 / float32(len(data)))
+      percent := float32(numWritten) * 100.0 / float32(len(data))
+      log.Printf("%d (%f %%)\n", numWritten, percent)
+      progressFunc(percent)
 
 			for numSent-numWritten < 5120 {
 				p.Write(data[numSent:numSent+1024])

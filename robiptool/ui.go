@@ -49,13 +49,7 @@ func components(binding *Binding) *ui.Box {
   for _, port := range binding.Ports {
     portCombobox.Append(port)
   }
-  portCombobox.Append("更新する..")
   portCombobox.SetSelected(0)
-  portCombobox.OnSelected(func(*ui.combobox) {
-    if portCombobox.Selected >= len(binding.Ports) {
-      updatePorts()
-    }
-  })
   inputField2Box.Append(portCombobox, false)
 
   button := ui.NewButton("書き込む!")
@@ -67,54 +61,71 @@ func components(binding *Binding) *ui.Box {
   mainBox.Append(ui.NewHorizontalSeparator(), false)
 
   progress := ui.NewProgressBar()
-  progress.Hide()
+  binding.ProgressBar = progress
+
   progress.SetValue(0)
   mainBox.Append(progress, true)
 
   message := ui.NewLabel("")
+  binding.MessageLabel = message
+
   mainBox.Append(message, true)
 
   button.OnClicked(func(*ui.Button) {
-    start(robipIdField.Text(), binding.PortAt(portCombobox.Selected()), message, progress)
+    go start(robipIdField.Text(), binding.PortAt(portCombobox.Selected()), binding)
   })
 
   return mainBox
 }
 
-func start(id string, port string, message *ui.Label, progress *ui.ProgressBar) {
-  progress.SetValue(0)
-  message.SetText("ファイルの読込中...")
+func doneWriting(binding *Binding, message string, err error) {
+  binding.IsWriting = false
+  if err != nil {
+    log.Println(err)
+  }
+  go ui.QueueMain(func() {
+    binding.ProgressBar.SetValue(0)
+    binding.MessageLabel.SetText("")
+    ui.MsgBox(binding.Window, "書き込み", message)
+  })
+}
 
-  log.Println(id)
-  log.Println(port)
-  progress.Show()
+func updateProgress(binding *Binding, progressVal int, message string) {
+  go ui.QueueMain(func() {
+    binding.ProgressBar.SetValue(progressVal)
+    binding.MessageLabel.SetText(message)
+  })
+}
+
+func start(id string, port string, binding *Binding) {
+  if binding.IsWriting {
+    return
+  }
+
+  binding.IsWriting = true
+
+  updateProgress(binding, 0, "ファイルの読込中...")
 
   if file, err := FetchBinary(id); err != nil {
-    log.Println(err)
-    message.SetText( "Robip IDからファイルを取得できませんでした")
-    progress.Hide()
+    doneWriting(binding, "Robip IDからファイルを取得できませんでした", err)
 
   } else {
-    message.SetText( "書き込み中...")
-    progress.SetValue(10)
+    updateProgress(binding, 10, "書き込み中...")
 
-    if err := WriteDataToPort(file.Name(), port, UpdateProgressFn(progress)); err != nil {
-      log.Println(err)
-      message.SetText( "書き込みに失敗しました")
-      progress.Hide()
+    if err := WriteDataToPort(file.Name(), port, UpdateProgressFn(binding.ProgressBar)); err != nil {
+      doneWriting(binding, "書き込みに失敗しました", err)
 
     } else {
-      message.SetText( "書き込みに成功しました!")
-      progress.SetValue(100)
-      
+      doneWriting(binding, "書き込みに成功しました!", nil)
     }
-
   }
 }
 
 func UpdateProgressFn(progressBar *ui.ProgressBar) UpdateProgress {
-  return func (value int) {
-    progressBar.SetValue(value)
+  return func (value float32) {
+    ui.QueueMain(func() {
+      progressBar.SetValue(10 + int(value * 0.9))
+    })
   }
 }
 
@@ -124,7 +135,10 @@ type Binding struct {
 	Counter	int
   RobipID string
   LogMessage string
+  IsWriting bool
   Window *ui.Window
+  MessageLabel *ui.Label
+  ProgressBar *ui.ProgressBar
 }
 
 func (binding  *Binding) AddPort(port string) {
