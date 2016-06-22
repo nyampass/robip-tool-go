@@ -2,17 +2,13 @@ package robiptool
 
 import (
   "log"
+  "time"
 
   "github.com/andlabs/ui"
 )
 
 func showUI() {
   binding := &Binding{}
-  if ports, err := Ports(); err == nil {
-    for _, port := range ports {
-      binding.AddPort(port)
-    }
-  }
 
   if err := ui.Main(func() {
     window := ui.NewWindow("Robip tool ver 1.2", 200, 40, false)
@@ -32,6 +28,32 @@ func showUI() {
   }
 }
 
+func newPortCombobox(binding *Binding, ports []string) *ui.Combobox {
+  portCombobox := ui.NewCombobox()
+  binding.PortCombobox = portCombobox
+
+  for _, port := range ports {
+    portCombobox.Append(port)
+  }
+  portCombobox.SetSelected(0)
+  return portCombobox
+}
+
+func updatePorts(binding *Binding, box *ui.Box) {
+  for {
+    time.Sleep(500 * time.Millisecond)
+    if ports, err := Ports(); err == nil {
+      if len(ports) != binding.CurrentPorts {
+        binding.CurrentPorts = len(ports)
+        ui.QueueMain(func() {
+          box.Delete(1)
+          box.Append(newPortCombobox(binding, ports), false)
+        })
+      }
+    }
+  }
+}
+
 func components(binding *Binding) *ui.Box {
   mainBox := ui.NewVerticalBox()
   mainBox.SetPadded(true)
@@ -45,12 +67,12 @@ func components(binding *Binding) *ui.Box {
   inputField1Box.Append(robipIdField, false)
 
   inputField2Box.Append(ui.NewLabel("ポート: "), false)
-  portCombobox := ui.NewCombobox()
-  for _, port := range binding.Ports {
-    portCombobox.Append(port)
+  if ports, err := Ports(); err == nil {
+    inputField2Box.Append(newPortCombobox(binding, ports), false)
+    binding.CurrentPorts = len(ports)
+
+    go updatePorts(binding, inputField2Box)
   }
-  portCombobox.SetSelected(0)
-  inputField2Box.Append(portCombobox, false)
 
   button := ui.NewButton("書き込む!")
   inputField1Box.Append(button, false)
@@ -72,7 +94,9 @@ func components(binding *Binding) *ui.Box {
   mainBox.Append(message, true)
 
   button.OnClicked(func(*ui.Button) {
-    go start(robipIdField.Text(), binding.PortAt(portCombobox.Selected()), binding)
+    if ports, err := Ports(); err == nil {
+      go start(robipIdField.Text(), ports[binding.PortCombobox.Selected()], binding)
+    }
   })
 
   return mainBox
@@ -130,9 +154,9 @@ func UpdateProgressFn(progressBar *ui.ProgressBar) UpdateProgress {
 }
 
 type Binding struct {
-	Ports []string
+  CurrentPorts int
+  PortCombobox *ui.Combobox
   PortIndex int
-	Counter	int
   RobipID string
   LogMessage string
   IsWriting bool
@@ -141,33 +165,14 @@ type Binding struct {
   ProgressBar *ui.ProgressBar
 }
 
-func (binding  *Binding) AddPort(port string) {
-	binding.Ports = append(binding.Ports, port)
-	binding.Counter++
-}
-
 func (binding *Binding) LogMessages() string {
   return binding.LogMessage
 }
 
 func (binding *Binding) AddMessage(message string) {
   binding.LogMessage += message
-	binding.Counter++
-}
-
-func (binding *Binding) PortsLength() int {
-	return len(binding.Ports)
-}
-
-func (binding *Binding) PortAt(index int) string {
-	return binding.Ports[index]
 }
 
 func (binding *Binding) OnSelectPort(index int) {
   binding.PortIndex = index
-}
-
-func (binding *Binding) OnClicked() {
-  port := binding.PortAt(binding.PortIndex)
-  log.Printf("Robip ID: %v, Port: %v\n", binding.RobipID, port)
 }
