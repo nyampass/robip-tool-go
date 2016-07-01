@@ -11,7 +11,9 @@ import (
 	"time"
   "crypto/md5"
 
-  "github.com/mikepb/go-serial"
+	"os/exec"
+
+  "github.com/facchinm/go-serial-native"
 )
 
 type Error struct {
@@ -43,25 +45,53 @@ func Ports() ([]string, error) {
 
 type UpdateProgress func(float32)
 
+func WriteByEsptool(filepath string, port string, progressFunc UpdateProgress) error {
+	cmd := exec.Command("./tool-esptool/esptool",
+    "-cd", "nodemcu",
+    "-cb", "115200",
+    "-cp", port, "-cf", filepath)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	if err := cmd.Start(); err != nil {
+    return err
+  }
+
+  go func() {
+    log.Println(out.String())
+  }()
+
+  if err := cmd.Wait(); err != nil {
+    return err
+  }
+	fmt.Printf("in all caps: %q\n", out.String())
+
+  return nil
+}
+
 func WriteDataToPort(filepath string, port string, progressFunc UpdateProgress) error {
   progressFunc(0)
 	fmt.Printf("write: %s\n", port)
 	options := serial.RawOptions
 	options.Mode = serial.MODE_READ_WRITE
 	options.BitRate = 115200
+  // options.FlowControl = 0
 	p, err := options.Open(port)
 	if err != nil {
+    log.Panic(err)
 		return err
 	}
 	defer p.Close()
 
 	if err := connect(p); err != nil {
+    log.Panic(err)
 		return err
 	}
 
   log.Println("in runStub")
 
 	if err = runStub(p, CESANTA_FLASHER_STUB); err != nil {
+    log.Panic(err)
 		return err
 	}
 
@@ -69,6 +99,7 @@ func WriteDataToPort(filepath string, port string, progressFunc UpdateProgress) 
   err = <-errChan
 
 	if err != nil {
+    log.Panic(err)
     return err
 
 	} else if string(packet) != "OHAI" {

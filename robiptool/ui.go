@@ -136,7 +136,8 @@ func start(id string, port string, binding *Binding) {
   } else {
     updateProgress(binding, 10, "書き込み中...")
 
-    if err := WriteDataToPort(file.Name(), port, UpdateProgressFn(binding.ProgressBar)); err != nil {
+    // if err := WriteDataToPort(file.Name(), port, UpdateProgressFn(binding.ProgressBar)); err != nil {
+    if err := WriteByEsptool(file.Name(), port, UpdateProgressFn(binding.ProgressBar)); err != nil {
       doneWriting(binding, "書き込みに失敗しました", err)
 
     } else {

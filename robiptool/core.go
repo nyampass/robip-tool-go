@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/mikepb/go-serial"
+  "github.com/facchinm/go-serial-native"
 )
 
 func Run() {

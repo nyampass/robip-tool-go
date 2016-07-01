@@ -1,3 +1,4 @@
-GOOS=windows GOARCH=amd64 go build main.go
-
 GOPATH=/Users/tokusei/.go ~/.go/bin/gox -osarch="darwin/amd64" ./...
+# GOPATH=/Users/tokusei/.go ~/.go/bin/gox -osarch="windows/amd64" ./...
+
+cp robip-tool-go_darwin_amd64 "./Robip Tool.app/Contents/MacOS/robip-tool-go"
